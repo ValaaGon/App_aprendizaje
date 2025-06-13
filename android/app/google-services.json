@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "473236795392",
+    "project_id": "apptesisss",
+    "storage_bucket": "apptesisss.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:473236795392:android:734beea808b00020b328e5",
+        "android_client_info": {
+          "package_name": "com.example.app_tese"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA09m6O1duxEKniZnCpNuZh6rNlCcOfgoA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
