@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:app_tesis/Pages/Main/Ejercicios/basico/juegos/imagen_palabra.dart';
 import 'package:app_tesis/Pages/Main/Ejercicios/basico/juegos/escuha_selecciona.dart';
@@ -27,40 +29,87 @@ class _MainPageState extends State<MainPage> {
 
     final nuevoEjercicio = await _obtenerEjercicio.obtenerEjercicioActual();
 
-    if (nuevoEjercicio.isEmpty) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('¡Nivel completado!',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.star_rounded, size: 64, color: Colors.amber),
-                SizedBox(height: 12),
-                Text('Has completado todos los ejercicios de este nivel.'),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Continuar'),
-              ),
-            ],
-          );
-        },
-      );
+    if (nuevoEjercicio.isEmpty ||
+        nuevoEjercicio['subioNivel'] == true ||
+        nuevoEjercicio['completo'] == true) {
+      final user = FirebaseAuth.instance.currentUser;
+      final userDoc =
+          FirebaseFirestore.instance.collection('usuarios').doc(user!.uid);
+      final docSnapshot = await userDoc.get();
+      final nivel = docSnapshot['nivel'];
 
-      final siguienteEjercicio =
-          await _obtenerEjercicio.obtenerEjercicioActual();
-      setState(() {
-        _ejercicioActual = siguienteEjercicio;
-        _cargando = false;
-      });
+      if (nuevoEjercicio['completo'] == true ||
+          nivel == 3 && (nuevoEjercicio['subioNivel'] != true)) {
+        await userDoc.update({'completo': true});
+
+        if (context.mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                title: const Text('¡Has terminado todos los niveles!',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.celebration, size: 64, color: Colors.green),
+                    SizedBox(height: 12),
+                    Text(
+                        '¡Felicitaciones! Has completado todos los ejercicios.'),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context)
+                        .popUntil((route) => route.isFirst),
+                    child: const Text('Volver al inicio'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      } else if (nuevoEjercicio['subioNivel'] == true) {
+        if (context.mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                title: const Text('¡Nivel completado!',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.star_rounded, size: 64, color: Colors.amber),
+                    SizedBox(height: 12),
+                    Text('Has completado todos los ejercicios de este nivel.'),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Continuar'),
+                  ),
+                ],
+              );
+            },
+          );
+
+          final siguienteEjercicio =
+              await _obtenerEjercicio.obtenerEjercicioActual();
+          setState(() {
+            _ejercicioActual = siguienteEjercicio;
+            _cargando = false;
+          });
+        }
+      }
+
       return;
     }
 

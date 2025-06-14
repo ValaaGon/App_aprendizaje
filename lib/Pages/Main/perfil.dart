@@ -42,12 +42,10 @@ class _PerfilState extends State<Perfil> {
     setState(() => _isLoading = true);
 
     try {
-      // Actualizar nombre
       await authService.value.updateUsername(
         username: _nameController.text.trim(),
       );
 
-      // Actualizar contraseña si se proporcionó
       if (_newPassController.text.isNotEmpty) {
         await authService.value.resetPassword(
           pass: _currentPassController.text.trim(),
@@ -83,54 +81,57 @@ class _PerfilState extends State<Perfil> {
             ),
           ),
 
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: ListView(
-              children: [
-                const SizedBox(height: 20),
-                // Campo nombre
-                CustomTextFormField(
-                  controller: _nameController,
-                  label: 'Nombre',
-                  prefixIcon: Icons.person,
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 500, // opcional para pantallas grandes
                 ),
-                const SizedBox(height: 20),
-
-                CustomTextFormField(
-                  controller: _emailController,
-                  label: 'Correo electrónico',
-                  prefixIcon: Icons.email,
-                  readOnly: true,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 40),
+                    CustomTextFormField(
+                      controller: _nameController,
+                      label: 'Nombre',
+                      prefixIcon: Icons.person,
+                    ),
+                    const SizedBox(height: 20),
+                    CustomTextFormField(
+                      controller: _emailController,
+                      label: 'Correo electrónico',
+                      prefixIcon: Icons.email,
+                      readOnly: true,
+                    ),
+                    const SizedBox(height: 20),
+                    CustomTextFormField(
+                      controller: _currentPassController,
+                      label: 'Contraseña actual',
+                      prefixIcon: Icons.lock,
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 20),
+                    CustomTextFormField(
+                      controller: _newPassController,
+                      label: 'Nueva contraseña',
+                      prefixIcon: Icons.lock_outline,
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _updateProfile,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator()
+                          : const Text('Guardar cambios'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-
-                CustomTextFormField(
-                  controller: _currentPassController,
-                  label: 'Contraseña actual',
-                  prefixIcon: Icons.lock,
-                  obscureText: true,
-                ),
-                const SizedBox(height: 20),
-
-                CustomTextFormField(
-                  controller: _newPassController,
-                  label: 'Nueva contraseña',
-                  prefixIcon: Icons.lock_outline,
-                  obscureText: true,
-                ),
-
-                const SizedBox(height: 30),
-                // Botón guardar
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _updateProfile,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                  ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('Guardar cambios'),
-                ),
-              ],
+              ),
             ),
           ),
         ],

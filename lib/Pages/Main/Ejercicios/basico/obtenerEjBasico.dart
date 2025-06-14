@@ -1,12 +1,10 @@
-import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ObtenerEjercicio {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final _random = Random();
 
-  final List<String> ordenTipos = ['Imagen', 'Sonido', 'oraciones'];
+  final List<String> ordenTipos = ['Imagen', 'Sonido', 'oraciones']..shuffle();
 
   Future<Map<String, dynamic>> obtenerEjercicioActual() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -18,71 +16,84 @@ class ObtenerEjercicio {
 
     final datos = userDoc.data()!;
     int nivel = datos['nivel'] ?? 1;
-    final aprendidos = List<String>.from(datos['ejercicios_aprendidos'] ?? []);
-    final repetidos = List<String>.from(datos['ejercicios_repetidos'] ?? []);
+    int contador = datos['contador'] ?? 0;
+
+    if (contador >= 4) {
+      if (nivel < 3) {
+        await userRef.update({
+          'nivel': nivel + 1,
+          'contador': 0,
+          'ejercicios_aprendidos': [],
+          'ejercicios_repetidos': [],
+        });
+        return {'subioNivel': true};
+      } else {
+        await userRef.update({'contador': 0});
+        return {'completo': true};
+      }
+    }
+
+    final List<QueryDocumentSnapshot> candidatos = [];
 
     for (final tipo in ordenTipos) {
-      List<QueryDocumentSnapshot> disponibles = [];
-
       if (nivel < 3) {
         final snapshot =
             await _db.collection(tipo).where('nivel', isEqualTo: nivel).get();
 
-        disponibles = snapshot.docs.where((doc) {
-          return !aprendidos.contains(doc.id);
-        }).toList();
+        for (final doc in snapshot.docs) {
+          final id = doc.id;
+          final aprendidos =
+              List<String>.from(datos['ejercicios_aprendidos'] ?? []);
+          if (!aprendidos.contains(id)) {
+            candidatos.add(doc);
+          }
+        }
       } else {
-        for (int buscarNivel = 1; buscarNivel <= 3; buscarNivel++) {
-          final snapshot = await _db
-              .collection(tipo)
-              .where('nivel', isEqualTo: buscarNivel)
-              .get();
-
-          final docs = snapshot.docs.where((doc) {
-            final id = doc.id;
-            final yaAprendido = aprendidos.contains(id);
-            final yaRepetido = repetidos.contains(id);
-
-            if (!yaAprendido) return true; // primera vez
-            if (yaAprendido && !yaRepetido) return true;
-            return false;
-          }).toList();
-
-          disponibles.addAll(docs);
+        for (int n = 1; n <= 2; n++) {
+          final snapshot =
+              await _db.collection(tipo).where('nivel', isEqualTo: n).get();
+          candidatos.addAll(snapshot.docs);
         }
       }
-
-      if (disponibles.isNotEmpty) {
-        final ejercicio = disponibles[_random.nextInt(disponibles.length)];
-        final ejercicioMap = _formatearEjercicio(ejercicio, tipo);
-        ejercicioMap['nivel'] = nivel;
-        return ejercicioMap;
-      }
     }
 
-    if (nivel < 3) {
-      await userRef.update({'nivel': nivel + 1});
-    }
+    if (candidatos.isEmpty) return {};
 
-    return {};
+    candidatos.shuffle();
+    final ejercicioSeleccionado = candidatos.first;
+
+    final tipoSeleccionado = ordenTipos.firstWhere(
+      (tipo) => ejercicioSeleccionado.reference.parent.id == tipo,
+      orElse: () => '',
+    );
+
+    final ejercicioMap =
+        _formatearEjercicio(ejercicioSeleccionado, tipoSeleccionado);
+    ejercicioMap['nivel'] = nivel;
+
+    return ejercicioMap;
   }
 
   Future<void> marcarAprendido(String idEjercicio) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final userDoc = await _db.collection('usuarios').doc(user.uid).get();
+    final userRef = _db.collection('usuarios').doc(user.uid);
+    final userDoc = await userRef.get();
     final datos = userDoc.data()!;
     final nivel = datos['nivel'] ?? 1;
     final aprendidos = List<String>.from(datos['ejercicios_aprendidos'] ?? []);
+    int contador = datos['contador'] ?? 0;
 
     if (nivel == 3 && aprendidos.contains(idEjercicio)) {
-      await _db.collection('usuarios').doc(user.uid).update({
-        'ejercicios_repetidos': FieldValue.arrayUnion([idEjercicio])
+      await userRef.update({
+        'ejercicios_repetidos': FieldValue.arrayUnion([idEjercicio]),
+        'contador': contador + 1,
       });
     } else {
-      await _db.collection('usuarios').doc(user.uid).update({
-        'ejercicios_aprendidos': FieldValue.arrayUnion([idEjercicio])
+      await userRef.update({
+        'ejercicios_aprendidos': FieldValue.arrayUnion([idEjercicio]),
+        'contador': contador + 1,
       });
     }
   }

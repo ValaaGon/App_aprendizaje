@@ -3,19 +3,21 @@ import 'package:flutter/material.dart';
 class Boton extends StatelessWidget {
   final String texto;
   final VoidCallback onPressed;
+  final bool enabled;
 
   const Boton({
     Key? key,
     required this.texto,
     required this.onPressed,
+    this.enabled = true,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      onPressed: onPressed,
+      onPressed: enabled ? onPressed : null,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFCEA0AA),
+        backgroundColor: enabled ? const Color(0xFFCEA0AA) : Colors.grey,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
